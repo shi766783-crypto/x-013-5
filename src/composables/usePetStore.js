@@ -1,5 +1,5 @@
 import { computed, reactive, watch } from 'vue'
-import { achievementDefinitions, createDemoState, daysFromToday, isThisWeek, normalRanges, todayISO, uid } from '../data'
+import { achievementDefinitions, createDemoState, daysFromToday, isThisWeek, MEDICATION_REMIND_DAYS, medicationCourse, normalRanges, uid } from '../data'
 
 const STORAGE_KEY = 'petcare-home-state'
 const saved = localStorage.getItem(STORAGE_KEY)
@@ -13,7 +13,14 @@ export function usePetStore() {
   const totalActivity = computed(() => state.activities.filter((item) => isThisWeek(item.date)).reduce((sum, item) => sum + Number(item.duration || 0), 0))
   const pendingVaccines = computed(() => state.vaccines.filter((item) => daysFromToday(item.nextDate) <= 7).length)
   const feedingTasks = computed(() => state.feedings.reduce((sum, item) => sum + Number(item.times || 0), 0))
-  const medicationsToday = computed(() => state.medications.filter((item) => item.startDate <= todayISO() && item.endDate >= todayISO()).length)
+  const medicationCourses = computed(() => state.medications.map((item) => ({ ...item, course: medicationCourse(item) })))
+  const activeMedications = computed(() => medicationCourses.value.filter((item) => item.course.status === 'active'))
+  const upcomingMedications = computed(() => medicationCourses.value.filter((item) => item.course.status === 'upcoming'))
+  const endedMedications = computed(() => medicationCourses.value.filter((item) => item.course.status === 'ended'))
+  const medicationsToday = computed(() => activeMedications.value.length)
+  const medicationReminders = computed(() => activeMedications.value
+    .filter((item) => item.course.remainingDays !== null && item.course.remainingDays <= MEDICATION_REMIND_DAYS)
+    .sort((a, b) => a.course.remainingDays - b.course.remainingDays))
   const achievements = computed(() => achievementDefinitions.map((item) => ({ ...item, unlocked: item.condition(state) })))
   const healthCompleteness = (petId) => {
     const fields = ['weight', 'temperature', 'heartRate']
@@ -29,6 +36,10 @@ export function usePetStore() {
   function add(itemType, payload) {
     state[itemType].unshift({ id: uid(itemType.slice(0, -1)), ...payload })
   }
+  function update(itemType, id, payload) {
+    const index = state[itemType].findIndex((item) => item.id === id)
+    if (index !== -1) state[itemType][index] = { ...state[itemType][index], ...payload, id }
+  }
   function addPet(payload) {
     add('pets', payload)
   }
@@ -37,5 +48,5 @@ export function usePetStore() {
     Object.keys(state).forEach((key) => { state[key].splice(0, state[key].length, ...(fresh[key] || [])) })
   }
 
-  return { state, petById, petName, totalActivity, pendingVaccines, feedingTasks, medicationsToday, achievements, healthCompleteness, weightCompliance, add, addPet, resetDemo }
+  return { state, petById, petName, totalActivity, pendingVaccines, feedingTasks, medicationCourses, activeMedications, upcomingMedications, endedMedications, medicationsToday, medicationReminders, achievements, healthCompleteness, weightCompliance, add, update, addPet, resetDemo }
 }

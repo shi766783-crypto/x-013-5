@@ -1,16 +1,17 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Activity, Award, Bell, BookOpen, CalendarDays, ChartNoAxesCombined, Check, ChevronRight, CircleHelp, HeartPulse, LayoutDashboard, Menu, PawPrint, Pill, Plus, Settings, ShieldCheck, Sparkles, Utensils, X } from 'lucide-vue-next'
+import { Activity, Award, Bell, BellRing, BookOpen, CalendarDays, ChartNoAxesCombined, Check, ChevronRight, CircleHelp, HeartPulse, LayoutDashboard, Menu, PawPrint, Pill, Plus, Settings, ShieldCheck, Sparkles, Utensils, X } from 'lucide-vue-next'
 import PetModal from './components/PetModal.vue'
 import RecordModal from './components/RecordModal.vue'
 import TrendChart from './components/TrendChart.vue'
-import { calculateAge, daysFromToday, formatDate, normalRanges, todayISO } from './data'
+import { calculateAge, daysFromToday, formatDate, MEDICATION_REMIND_DAYS, medicationRemainingLabel, normalRanges } from './data'
 import { usePetStore } from './composables/usePetStore'
 
-const { state, petById, petName, totalActivity, pendingVaccines, feedingTasks, medicationsToday, achievements, healthCompleteness, weightCompliance, add, addPet } = usePetStore()
+const { state, petById, petName, totalActivity, pendingVaccines, feedingTasks, activeMedications, upcomingMedications, endedMedications, medicationsToday, medicationReminders, achievements, healthCompleteness, weightCompliance, add, update, addPet } = usePetStore()
 const activeNav = ref('overview')
 const showPetModal = ref(false)
 const recordType = ref('')
+const editingRecord = ref(null)
 const selectedPetId = ref('pet-momo')
 const selectedMetric = ref('weight')
 const mobileMenu = ref(false)
@@ -45,16 +46,22 @@ const agenda = computed(() => {
       time: index === 0 ? '08:00' : index === 1 ? '18:00' : '21:00',
     }),
   ))
-  const medicationItems = state.medications
-    .filter((item) => item.startDate <= todayISO() && item.endDate >= todayISO())
-    .map((item) => ({
-      id: item.id,
-      kind: 'medication',
-      icon: Pill,
-      title: `${petName(item.petId)} · ${item.name}`,
-      detail: `${item.dose} · ${item.frequency}`,
-      time: '09:00',
-    }))
+  const medicationItems = activeMedications.value.map((item) => ({
+    id: item.id,
+    kind: 'medication',
+    icon: Pill,
+    title: `${petName(item.petId)} · ${item.name}`,
+    detail: `${item.dose || '按医嘱'} · ${item.frequency} · ${medicationRemainingLabel(item.course)}`,
+    time: '09:00',
+  }))
+  const medicationReminderItems = medicationReminders.value.map((item) => ({
+    id: `${item.id}-reminder`,
+    kind: 'reminder',
+    icon: BellRing,
+    title: `停药提醒 · ${petName(item.petId)} ${item.name}`,
+    detail: medicationReminderText(item),
+    time: '提醒',
+  }))
   const vaccineItems = upcomingVaccines.value
     .filter((item) => item.days <= 7)
     .map((item) => ({
@@ -65,7 +72,7 @@ const agenda = computed(() => {
       detail: item.days < 0 ? '已逾期，请尽快安排' : item.days === 0 ? '今天需要接种' : `${item.days} 天后到期`,
       time: '提醒',
     }))
-  return [...feedingItems, ...medicationItems, ...vaccineItems]
+  return [...feedingItems, ...medicationItems, ...medicationReminderItems, ...vaccineItems]
 })
 const averageWeightChange = computed(() => {
   const records = state.healthRecords.filter((item) => item.type === 'weight')
@@ -74,11 +81,38 @@ const averageWeightChange = computed(() => {
   return `${(Number(sorted[sorted.length - 1].value) - Number(sorted[0].value)).toFixed(1)} kg`
 })
 const leaderboard = computed(() => state.pets.map((pet) => ({ ...pet, completeness: healthCompleteness(pet.id), activity: state.activities.filter((item) => item.petId === pet.id).reduce((sum, item) => sum + Number(item.duration || 0), 0) })).sort((a, b) => b.completeness - a.completeness))
+const ongoingMedications = computed(() => [
+  ...[...activeMedications.value].sort((a, b) => (a.course.remainingDays ?? 999) - (b.course.remainingDays ?? 999)),
+  ...[...upcomingMedications.value].sort((a, b) => a.course.daysUntilStart - b.course.daysUntilStart),
+])
 
 function openRecord(type) { recordType.value = type }
-function saveRecord({ collection, payload }) { add(collection, payload); recordType.value = '' }
+function openEditMedication(item) {
+  const { course, ...record } = item
+  editingRecord.value = record
+  recordType.value = 'medication'
+}
+function closeRecord() { recordType.value = ''; editingRecord.value = null }
+function saveRecord({ collection, payload }) {
+  if (payload.id) update(collection, payload.id, payload)
+  else add(collection, payload)
+  closeRecord()
+}
 function metricLabel(type) { return normalRanges[type]?.label || type }
 function vaccineTone(days) { return days < 0 ? 'danger' : days <= 7 ? 'warning' : 'success' }
+function medicationReminderText(item) {
+  return item.course.remainingDays === 0
+    ? '疗程今天结束，请停药或联系医生复诊'
+    : `疗程${medicationRemainingLabel(item.course)}，请提前安排停药或复诊`
+}
+function medBadgeTone(course) {
+  if (course.status === 'upcoming') return 'upcoming'
+  if (course.status === 'ended') return 'ended'
+  if (course.remainingDays === null || course.remainingDays === undefined) return 'ok'
+  if (course.remainingDays === 0) return 'today'
+  if (course.remainingDays <= MEDICATION_REMIND_DAYS) return 'soon'
+  return 'ok'
+}
 </script>
 
 <template>
@@ -98,6 +132,40 @@ function vaccineTone(days) { return days < 0 ? 'danger' : days <= 7 ? 'warning' 
           <article class="panel pets-panel"><div class="panel-heading"><div><span class="eyebrow">成员档案</span><h3>我的宠物</h3></div><button class="text-btn" @click="activeNav = 'health'">查看档案 <ChevronRight :size="15" /></button></div><div class="pet-list"><button v-for="pet in state.pets" :key="pet.id" class="pet-card" :class="{ selected: selectedPetId === pet.id }" @click="selectedPetId = pet.id"><div class="pet-avatar" :class="pet.species === '狗' ? 'dog' : 'cat'"><img v-if="pet.photo" :src="pet.photo" :alt="pet.name" /><span v-else>{{ pet.species === '狗' ? '🐕' : pet.species === '猫' ? '🐈' : '🐾' }}</span></div><div class="pet-info"><strong>{{ pet.name }}</strong><span>{{ pet.breed || pet.species }} · {{ pet.gender }}</span><span>{{ calculateAge(pet.birthDate) }} · {{ pet.weight || '--' }} kg</span></div><div class="pet-status"><span class="status-dot"></span>健康</div><ChevronRight class="pet-arrow" :size="17" /></button><button class="add-pet-card" @click="showPetModal = true"><span><Plus :size="18" /></span><strong>添加新宠物</strong><small>建立专属健康档案</small></button></div></article>
           <article class="panel agenda-panel"><div class="panel-heading"><div><span class="eyebrow">今天 · 9月16日</span><h3>日程提醒</h3></div><button class="icon-btn subtle"><CalendarDays :size="18" /></button></div><div class="agenda-list"><div v-for="item in agenda.slice(0, 5)" :key="item.id" class="agenda-item"><div class="agenda-time">{{ item.time }}</div><div class="agenda-icon" :class="item.kind"><component :is="item.icon" :size="17" /></div><div class="agenda-copy"><strong>{{ item.title }}</strong><span>{{ item.detail }}</span></div><button class="check-circle"><Check :size="14" /></button></div><div v-if="!agenda.length" class="empty-state">今天没有待办，享受轻松的一天吧。</div></div><button class="full-btn" @click="activeNav = 'schedule'">查看全部日程 <ChevronRight :size="15" /></button></article>
         </section>
+        <section class="content-grid med-grid">
+          <article class="panel med-panel">
+            <div class="panel-heading"><div><span class="eyebrow">用药疗程</span><h3>疗程进度 <small>{{ medicationsToday }} 项进行中</small></h3></div><button class="text-btn" @click="openRecord('medication')">添加 <Plus :size="15" /></button></div>
+            <div v-if="medicationReminders.length" class="med-alerts">
+              <div v-for="item in medicationReminders" :key="item.id" class="med-alert">
+                <BellRing :size="15" />
+                <span><strong>{{ petName(item.petId) }} · {{ item.name }}</strong>{{ medicationReminderText(item) }}。</span>
+              </div>
+            </div>
+            <div class="med-list">
+              <div v-for="item in ongoingMedications" :key="item.id" class="med-item">
+                <div class="med-icon"><Pill :size="16" /></div>
+                <div class="med-main">
+                  <div class="med-title"><strong>{{ item.name }}</strong><span>{{ petName(item.petId) }} · {{ item.dose || '按医嘱' }} · {{ item.frequency }}</span></div>
+                  <div v-if="item.course.progress !== null" class="med-progress"><i :style="{ width: `${Math.round(item.course.progress * 100)}%` }"></i></div>
+                  <div class="med-meta"><span>{{ formatDate(item.startDate) }} – {{ formatDate(item.endDate) }}</span><span v-if="item.course.totalDays">共 {{ item.course.totalDays }} 天</span></div>
+                </div>
+                <div class="med-side">
+                  <span class="med-badge" :class="medBadgeTone(item.course)">{{ medicationRemainingLabel(item.course) }}</span>
+                  <button class="mini-btn" @click="openEditMedication(item)">调整</button>
+                </div>
+              </div>
+              <div v-if="!state.medications.length" class="empty-state med-empty">还没有用药计划，点击右上角添加。</div>
+            </div>
+            <div v-if="endedMedications.length" class="med-ended">
+              <span class="med-ended-title">已结束的疗程</span>
+              <div v-for="item in endedMedications" :key="item.id" class="med-ended-item">
+                <span>{{ item.name }} · {{ petName(item.petId) }}</span>
+                <span>{{ formatDate(item.startDate) }} – {{ formatDate(item.endDate) }}</span>
+                <span class="med-badge ended">已结束</span>
+              </div>
+            </div>
+          </article>
+        </section>
         <section class="content-grid lower-grid">
           <article class="panel trend-panel"><div class="panel-heading"><div><span class="eyebrow">健康趋势</span><h3>{{ currentPet?.name }} 的{{ metricLabel(selectedMetric) }}变化</h3></div><div class="segmented"><button v-for="metric in ['weight', 'temperature', 'heartRate']" :key="metric" :class="{ active: selectedMetric === metric }" @click="selectedMetric = metric">{{ metricLabel(metric) }}</button></div></div><div class="trend-summary"><div><strong>{{ recentHealthRecords.at(-1)?.value || currentPet?.weight || '--' }} <small>{{ normalRanges[selectedMetric].unit }}</small></strong><span>最近记录 · {{ recentHealthRecords.at(-1)?.date ? formatDate(recentHealthRecords.at(-1).date) : '暂无' }}</span></div><span class="health-status" :class="healthStatus.className"><i></i>{{ healthStatus.label }}</span><span class="range-tag"><span></span>正常范围 {{ normalRanges[selectedMetric].min }} - {{ normalRanges[selectedMetric].max }} {{ normalRanges[selectedMetric].unit }}</span></div><TrendChart :records="recentHealthRecords" :type="selectedMetric" /><button class="full-btn" @click="openRecord('health')">记录健康指标 <Plus :size="15" /></button></article>
           <article class="panel quick-panel"><div class="panel-heading"><div><span class="eyebrow">快速记录</span><h3>把日常变成习惯</h3></div><Sparkles :size="18" class="heading-spark" /></div><div class="quick-actions"><button @click="openRecord('health')"><span class="quick-icon health"><HeartPulse :size="19" /></span><span><strong>健康指标</strong><small>体重、体温、心率</small></span><ChevronRight :size="16" /></button><button @click="openRecord('vaccine')"><span class="quick-icon vaccine"><ShieldCheck :size="19" /></span><span><strong>疫苗与驱虫</strong><small>守护免疫计划</small></span><ChevronRight :size="16" /></button><button @click="openRecord('activity')"><span class="quick-icon activity"><Activity :size="19" /></span><span><strong>活动记录</strong><small>记录每一次活力</small></span><ChevronRight :size="16" /></button><button @click="openRecord('feeding')"><span class="quick-icon feeding"><Utensils :size="19" /></span><span><strong>喂食计划</strong><small>安排每日饮食</small></span><ChevronRight :size="16" /></button></div></article>
@@ -110,6 +178,6 @@ function vaccineTone(days) { return days < 0 ? 'danger' : days <= 7 ? 'warning' 
       </div>
     </main>
     <PetModal :visible="showPetModal" @close="showPetModal = false" @submit="(payload) => { addPet(payload); showPetModal = false }" />
-    <RecordModal :visible="!!recordType" :type="recordType || 'health'" :pets="state.pets" @close="recordType = ''" @submit="saveRecord" />
+    <RecordModal :visible="!!recordType" :type="recordType || 'health'" :pets="state.pets" :record="editingRecord" @close="closeRecord" @submit="saveRecord" />
   </div>
 </template>

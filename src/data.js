@@ -26,6 +26,39 @@ export function uid(prefix = 'item') {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
+// 疗程结束前多少天开始提醒停药/复诊
+export const MEDICATION_REMIND_DAYS = 2
+
+// 计算一条用药计划的疗程状态：upcoming（未开始）/ active（进行中）/ ended（已结束）
+export function medicationCourse(med) {
+  const today = todayISO()
+  const start = med.startDate || ''
+  const end = med.endDate || ''
+  const validRange = Boolean(start && end && end >= start)
+  const totalDays = validRange
+    ? Math.round((new Date(`${end}T00:00:00`) - new Date(`${start}T00:00:00`)) / 86400000) + 1
+    : 0
+  if (start && today < start) {
+    return { status: 'upcoming', totalDays, elapsedDays: 0, remainingDays: validRange ? totalDays : null, progress: 0, daysUntilStart: daysFromToday(start) }
+  }
+  if (end && today > end) {
+    return { status: 'ended', totalDays, elapsedDays: totalDays, remainingDays: 0, progress: 1, endedDaysAgo: Math.max(-daysFromToday(end), 0) }
+  }
+  const remainingDays = end ? Math.max(daysFromToday(end), 0) : null
+  const elapsedDays = start ? Math.max(1 - daysFromToday(start), 0) : 0
+  const progress = totalDays ? Math.min(Math.max(elapsedDays / totalDays, 0), 1) : null
+  return { status: 'active', totalDays, elapsedDays, remainingDays, progress }
+}
+
+export function medicationRemainingLabel(course) {
+  if (course.status === 'upcoming') return `${course.daysUntilStart} 天后开始`
+  if (course.status === 'ended') return '已结束'
+  if (course.remainingDays === null || course.remainingDays === undefined) return '长期用药'
+  if (course.remainingDays === 0) return '今天结束'
+  if (course.remainingDays === 1) return '明天结束'
+  return `还剩 ${course.remainingDays} 天`
+}
+
 export function todayISO() {
   const date = new Date()
   const offset = date.getTimezoneOffset()
@@ -89,7 +122,10 @@ export function createDemoState() {
       { id: 'vaccine-2', petId: 'pet-nori', name: '狂犬疫苗', date: '2025-10-08', nextDate: '2026-10-08', hospital: '森屿宠物诊所', notes: '' },
     ],
     medications: [
-      { id: 'med-1', petId: 'pet-momo', name: '益生菌', dose: '1包', frequency: '每日 1 次', startDate: '2026-09-15', endDate: '2026-09-21', notes: '随餐喂食' },
+      { id: 'med-1', petId: 'pet-momo', name: '益生菌', dose: '1包', frequency: '每日 1 次', startDate: '2026-09-28', endDate: '2026-10-06', notes: '随餐喂食' },
+      { id: 'med-2', petId: 'pet-nori', name: '皮肤喷剂', dose: '喷 2 下', frequency: '每日 2 次', startDate: '2026-10-01', endDate: '2026-10-12', notes: '避开眼周' },
+      { id: 'med-3', petId: 'pet-momo', name: '止咳糖浆', dose: '2ml', frequency: '每日 2 次', startDate: '2026-10-08', endDate: '2026-10-14', notes: '' },
+      { id: 'med-4', petId: 'pet-nori', name: '关节营养片', dose: '1片', frequency: '每日 1 次', startDate: '2026-09-10', endDate: '2026-09-20', notes: '已复查，疗程结束' },
     ],
     feedings: [
       { id: 'feed-1', petId: 'pet-momo', food: '主粮', brand: '渴望六种鱼', times: 2, portion: '35g' },
