@@ -20,5 +20,51 @@
 .placeholder-page .welcome-row { margin-bottom: 25px; } .wide-panel { min-height: 460px; } .wide-panel + .panel { align-self:start; } .all-badges { display:grid; grid-template-columns:repeat(2, 1fr); gap: 8px; } .achievement-row { display:flex; align-items:center; gap:10px; padding:11px; background:#fafbf8; border-radius:7px; opacity:.55; } .achievement-row.unlocked { opacity:1; background:#f0f6df; } .badge-large { width:36px;height:36px;display:grid;place-items:center;border-radius:50%;color:#aeb8a8;background:#e8ece3; } .unlocked .badge-large { color:#fff;background:#c1d650; } .achievement-row div:nth-child(2) { flex:1; } .achievement-row strong,.achievement-row span { display:block; } .achievement-row strong { font-size:11px; } .achievement-row span { color:var(--muted);font-size:9px;margin-top:3px; } .achievement-row b { color:#809631;font-size:9px; } .table-list { display:grid; } .table-row { display:grid; grid-template-columns: .7fr 1fr 1fr 1fr; gap: 10px; align-items:center; min-height: 47px; border-bottom:1px solid #eff1ed; font-size:10px; } .table-row span { color:var(--muted); } .leaderboard-panel .panel-heading > svg { color:#a5bd44; } .rank-row { display:flex;align-items:center;gap:9px;padding:10px 0;border-bottom:1px solid #eff1ed; } .rank-number { color:#aeb7aa;font-size:10px;width:18px; } .mini-avatar { width:30px;height:30px;display:grid;place-items:center;background:#f0e2d6;border-radius:8px;font-size:17px; } .rank-row div:nth-child(3) { flex:1; } .rank-row strong,.rank-row span { display:block; } .rank-row strong { font-size:11px; } .rank-row span { color:var(--muted);font-size:9px;margin-top:2px; } .rank-row b { color:#7c9532;font-size:13px; }
 .modal-backdrop { position:fixed; z-index:20; inset:0; display:grid; place-items:center; padding:20px; background:rgba(37,47,35,.28); } .modal { width:min(700px, 100%); max-height:92vh; overflow:auto; padding:24px; background:#fff; border-radius:10px; box-shadow:0 18px 60px rgba(37,47,35,.18); } .compact-modal { width:min(480px,100%); } .modal-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:22px; } .modal-header h2 { font-size:21px; } .form-grid { display:grid; grid-template-columns: 145px 1fr; gap: 15px 17px; } .form-fields { display:grid; grid-template-columns:1fr 1fr; gap:12px; } label { display:grid; gap:6px; color:#738071; font-size:10px; font-weight:600; } input,select,textarea { width:100%; border:1px solid #dfe5db; border-radius:6px; padding:9px 10px; outline:none; color:var(--ink); background:#fcfdfb; font-size:11px; } input:focus,select:focus,textarea:focus { border-color:#b9cf6d; box-shadow:0 0 0 3px #eef5dd; } textarea { resize:vertical; } .photo-picker { min-height:145px; display:grid; place-items:center; align-content:center; gap:7px; color:#9ca796; border:1px dashed #cfd9c7; border-radius:8px; cursor:pointer; background:#fafcf8; } .photo-picker input { display:none; } .photo-picker img { width:85px;height:85px;object-fit:cover;border-radius:50%; } .photo-picker span { font-size:10px; } .span-2 { grid-column: span 2; } .check-label { display:flex; align-items:center; gap:7px; align-self:end; padding-bottom:9px; } .check-label input { width:14px; } .modal-actions { display:flex; justify-content:flex-end; gap:8px; padding-top:5px; border-top:1px solid #eef1ec; margin-top:2px; } .single-column { grid-template-columns:1fr; gap:13px; } .two-fields { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .empty-state { padding: 35px 0; text-align:center; color:#a4ada0; font-size:11px; }
-@media (max-width: 1080px) { .sidebar { width:210px; flex-basis:210px; } .stat-grid { grid-template-columns:repeat(2,1fr); } .content-grid,.lower-grid,.bottom-grid { grid-template-columns:1fr; } .quick-panel { order: -1; } }
+/* 用药临期提醒（日程项内） */
+.agenda-alert { display:flex !important; align-items:center; gap:4px; margin-top:3px !important; color:#bd7a4e; font-size:9px !important; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.agenda-alert svg { flex:0 0 auto; }
+/* 表单提示与校验 */
+.form-hint { margin:0; color:#8fa046; font-size:10px; }
+.form-error { margin:0; color:#bd6660; font-size:10px; font-weight:600; }
+.btn:disabled { opacity:.55; cursor:not-allowed; box-shadow:none; }
+/* 用药疗程面板 */
+.medication-section { margin-top:15px; }
+.medication-reminder-banner { display:flex; align-items:flex-start; gap:9px; margin-bottom:16px; padding:11px 13px; background:#fbeee2; border:1px solid #f3dcc6; border-radius:8px; color:#b06d43; font-size:10px; line-height:1.6; }
+.medication-reminder-banner svg { flex:0 0 auto; margin-top:1px; }
+.medication-reminder-banner strong { color:#a3623c; }
+.medication-grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:12px; }
+.med-card { padding:14px; background:#fafbf8; border:1px solid var(--line); border-radius:8px; display:grid; gap:10px; min-width:0; }
+.med-card.alert { border-color:#eccfa7; background:#fef9f2; }
+.med-card.completed { opacity:.68; }
+.med-card-head { display:flex; align-items:center; gap:10px; }
+.med-mark { width:31px; height:31px; flex:0 0 31px; display:grid; place-items:center; border-radius:8px; background:var(--lavender); color:#8175a4; }
+.med-card.alert .med-mark { background:#f6e3d2; color:#b9784c; }
+.med-title { flex:1; min-width:0; }
+.med-title strong, .med-title span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.med-title strong { font-size:12px; }
+.med-title span { margin-top:2px; color:var(--muted); font-size:9px; }
+.med-status { flex:0 0 auto; padding:4px 8px; border-radius:4px; font-size:9px; white-space:nowrap; font-weight:600; }
+.med-status.active { color:#6f8a2e; background:#e9f2d3; }
+.med-status.upcoming { color:#7f8a96; background:#eef0f2; }
+.med-status.completed { color:#99a294; background:#f0f2ee; }
+.med-progress { display:grid; gap:6px; }
+.med-progress-track { height:6px; border-radius:3px; background:#eef0ea; overflow:hidden; }
+.med-progress-bar { height:100%; border-radius:3px; background:linear-gradient(90deg, #bdd85f, #9ec03c); transition:width .3s ease; }
+.med-progress-bar.ending { background:linear-gradient(90deg, #e8a571, #dc8958); }
+.med-progress-meta { display:flex; justify-content:space-between; gap:8px; color:var(--muted); font-size:9px; }
+.med-progress-meta strong { color:#5e7626; font-size:10px; }
+.med-card.alert .med-progress-meta strong { color:#b06d3f; }
+.med-progress-meta.open-ended { display:flex; align-items:center; gap:5px; }
+.med-date-row { display:flex; align-items:center; gap:6px; color:#788273; font-size:9px; }
+.med-date-row i { color:#aeb8a8; font-style:normal; }
+.med-date-row svg { color:#c2cabd; }
+.med-alert-line { display:flex; align-items:flex-start; gap:5px; margin:0; padding:7px 9px; border-radius:6px; background:#fbeee2; color:#a3623c; font-size:9px; font-weight:600; line-height:1.5; }
+.med-alert-line svg { flex:0 0 auto; margin-top:1px; }
+.med-notes { margin:0; color:#98a394; font-size:9px; line-height:1.5; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.med-actions { display:flex; gap:7px; padding-top:8px; border-top:1px dashed #e7ebe4; }
+.med-action-btn { display:inline-flex; align-items:center; gap:4px; padding:5px 9px; border-radius:5px; background:#f0f3ea; color:#6f7d62; font-size:9px; font-weight:600; }
+.med-action-btn:hover { background:#e6edd8; color:#5e7626; }
+.med-action-btn.stop { background:#f9e8e0; color:#b3654f; }
+.med-action-btn.stop:hover { background:#f3dace; color:#a0563f; }
+@media (max-width: 1080px) { .sidebar { width:210px; flex-basis:210px; } .stat-grid { grid-template-columns:repeat(2,1fr); } .content-grid,.lower-grid,.bottom-grid { grid-template-columns:1fr; } .quick-panel { order: -1; } .medication-grid { grid-template-columns:1fr; } }
 @media (max-width: 700px) { .sidebar { position:fixed; z-index:30; inset:0 auto 0 0; transform:translateX(-100%); transition:transform .2s ease; width:240px; } .sidebar.is-open { transform:translateX(0); } .menu-toggle,.mobile-close { display:grid; } .mobile-close { margin-left:auto; } .topbar { height:78px; padding:0 18px; gap:10px; } .topbar > div:nth-child(2) { flex:1; } .top-actions { gap:8px; } .user-chip strong { display:none; } .page { padding:26px 18px 45px; } .welcome-row { align-items:flex-start; flex-direction:column; } .welcome-row .btn { align-self:stretch; } h2 { font-size:24px; } .stat-grid { gap:8px; } .stat-card { padding:13px 11px; gap:8px; } .stat-icon { width:30px;height:30px;flex-basis:30px; } .stat-card strong { font-size:20px; } .stat-card em { font-size:8px; overflow:hidden; text-overflow:ellipsis; } .panel { padding:15px; } .pet-list { grid-template-columns:1fr; } .trend-summary { align-items:flex-start; flex-direction:column; } .segmented { width:100%; } .segmented button { flex:1; } .all-badges { grid-template-columns:1fr; } .table-row { grid-template-columns: .7fr 1fr; gap: 5px; padding:10px 0; } .table-row span:nth-child(3),.table-row span:nth-child(4) { text-align:right; } .form-grid { grid-template-columns:1fr; } .form-fields { grid-template-columns:1fr 1fr; } .form-grid .span-2 { grid-column:span 2; } .photo-picker { min-height:90px; } }
